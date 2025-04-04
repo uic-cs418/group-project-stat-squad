@@ -91,7 +91,7 @@ def clustering(state_yearly_df, income):
     
     return clustering_df
 
-def cholorpath_graph():    
+def choropleth_graph(median_income):    
     state_to_abbrev = {
         'Alabama': 'AL','Alaska': 'AK','Arizona': 'AZ','Arkansas': 'AR','California': 'CA',
         'Colorado': 'CO','Connecticut': 'CT','Delaware': 'DE','Florida': 'FL','Georgia': 'GA','Hawaii': 'HI',
