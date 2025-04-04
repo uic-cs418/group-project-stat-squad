@@ -92,35 +92,45 @@ def clustering(state_yearly_df, income):
     return clustering_df
 
 def choropleth_graph(median_income):    
+    import plotly.express as px
+
+    # Map full state names to abbreviations
     state_to_abbrev = {
         'Alabama': 'AL','Alaska': 'AK','Arizona': 'AZ','Arkansas': 'AR','California': 'CA',
         'Colorado': 'CO','Connecticut': 'CT','Delaware': 'DE','Florida': 'FL','Georgia': 'GA','Hawaii': 'HI',
-        'Idaho': 'ID', 'Illinois': 'IL','Indiana': 'IN','Iowa': 'IA','Kansas': 'KS', 'Kentucky': 'KY',
-        'Louisiana': 'LA','Maine': 'ME','Maryland': 'MD','Massachusetts': 'MA',
-        'Michigan': 'MI','Minnesota': 'MN','Mississippi': 'MS','Missouri': 'MO',
-        'Montana': 'MT','Nebraska': 'NE','Nevada': 'NV','New Hampshire': 'NH',
-        'New Jersey': 'NJ','New Mexico': 'NM','New York': 'NY','North Carolina': 'NC','North Dakota': 'ND','Ohio': 'OH',
-        'Oklahoma': 'OK','Oregon': 'OR','Pennsylvania': 'PA',
-        'Rhode Island': 'RI','South Carolina': 'SC','South Dakota': 'SD','Tennessee': 'TN',
-        'Texas': 'TX','Utah': 'UT','Vermont': 'VT','Virginia': 'VA',
+        'Idaho': 'ID','Illinois': 'IL','Indiana': 'IN','Iowa': 'IA','Kansas': 'KS','Kentucky': 'KY',
+        'Louisiana': 'LA','Maine': 'ME','Maryland': 'MD','Massachusetts': 'MA','Michigan': 'MI',
+        'Minnesota': 'MN','Mississippi': 'MS','Missouri': 'MO','Montana': 'MT','Nebraska': 'NE',
+        'Nevada': 'NV','New Hampshire': 'NH','New Jersey': 'NJ','New Mexico': 'NM','New York': 'NY',
+        'North Carolina': 'NC','North Dakota': 'ND','Ohio': 'OH','Oklahoma': 'OK','Oregon': 'OR',
+        'Pennsylvania': 'PA','Rhode Island': 'RI','South Carolina': 'SC','South Dakota': 'SD',
+        'Tennessee': 'TN','Texas': 'TX','Utah': 'UT','Vermont': 'VT','Virginia': 'VA',
         'Washington': 'WA','West Virginia': 'WV','Wisconsin': 'WI','Wyoming': 'WY'
     }
-    
-    
+
+    # Copy the input DataFrame
     df = median_income.copy()
-    
+
+    # Map state names to abbreviations
     df['State_Abbrev'] = df['State'].map(state_to_abbrev)
+
+    # Drop rows where abbreviation mapping failed
     df_clean = df.dropna(subset=['State_Abbrev'])
-    dates = df_clean.columns[1:]
+
+    # Get year columns (everything except State and Abbrev)
     date_columns = df_clean.columns.difference(['State', 'State_Abbrev'])
-    
+
+    df_clean[date_columns] = df_clean[date_columns].replace('[\$,]', '', regex=True).astype(float)
+
+    # Melt the dataframe for animation
     df_long = df_clean.melt(
         id_vars=['State', 'State_Abbrev'],
         value_vars=date_columns,
         var_name='Date',
         value_name='Value'
     )
-    
+
+    # Create choropleth map
     fig = px.choropleth(
         df_long,
         locations='State_Abbrev',
@@ -131,10 +141,11 @@ def choropleth_graph(median_income):
         animation_frame='Date',
         title="Average Income by Year"
     )
-    
-    
+
+    # Resize the figure
     fig.update_layout(width=1000, height=700)
     fig.show()
+
 
 
 def showHeatMap(home_values_dataset,income):
