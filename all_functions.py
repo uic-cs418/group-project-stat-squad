@@ -91,8 +91,7 @@ def clustering(state_yearly_df, income):
     
     return clustering_df
 
-def cholorpath_graph():
-    
+def cholorpath_graph():    
     state_to_abbrev = {
         'Alabama': 'AL','Alaska': 'AK','Arizona': 'AZ','Arkansas': 'AR','California': 'CA',
         'Colorado': 'CO','Connecticut': 'CT','Delaware': 'DE','Florida': 'FL','Georgia': 'GA','Hawaii': 'HI',
@@ -108,7 +107,7 @@ def cholorpath_graph():
     }
     
     
-    df = mi.copy()
+    df = median_income.copy()
     
     df['State_Abbrev'] = df['State'].map(state_to_abbrev)
     df_clean = df.dropna(subset=['State_Abbrev'])
