@@ -135,3 +135,67 @@ def cholorpath_graph():
     
     fig.update_layout(width=1000, height=700)
     fig.show()
+
+
+def showHeatMap():
+    ​​# Create a copy to avoid changing the original dataset
+    home_values_copy = home_values_dataset.copy()
+    income_copy = income.copy()
+    
+    # Manually map state abbreviations to full names
+    abbr_to_full = {
+        'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+        'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+        'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+        'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+        'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+        'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+        'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+        'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+        'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+        'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+        'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+        'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+        'WI': 'Wisconsin', 'WY': 'Wyoming'
+    }
+    
+    # Map full state names
+    home_values_copy['State'] = home_values_copy['StateName'].map(abbr_to_full)
+    
+    # Convert to long format and extract year
+    home_long = home_values_copy.melt(
+        id_vars=['State'],
+        value_vars=home_values_copy.columns[5:-1],  # exclude trailing columns if any
+        var_name='Date',
+        value_name='HomeValue'
+    )
+    home_long['Year'] = pd.to_datetime(home_long['Date']).dt.year
+    home_yearly = home_long.groupby(['State', 'Year'])['HomeValue'].mean().reset_index()
+    
+    # Clean income data (on copy)
+    for col in income_copy.columns[1:]:
+        income_copy[col] = income_copy[col].str.replace(',', '').astype(float)
+    income_long = income_copy.melt(id_vars=['State'], var_name='Year', value_name='MedianIncome')
+    income_long['Year'] = income_long['Year'].astype(int)
+    
+    # Merge and calculate affordability
+    merged = pd.merge(income_long, home_yearly, on=['State', 'Year'], how='inner')
+    merged['PriceToIncomeRatio'] = merged['HomeValue'] / merged['MedianIncome']
+
+    heatmap_data = merged.pivot(index='State', columns='Year', values='PriceToIncomeRatio')
+    plt.figure(figsize=(14, 12))
+    sns.heatmap(heatmap_data, cmap='YlOrRd', linewidths=0.5, linecolor='gray', cbar_kws={'label': 'Price-to-Income Ratio'})
+    plt.title("Heatmap of Housing Affordability by State and Year")
+    plt.xlabel("Year")
+    plt.ylabel("State")
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+    
+
+
+
+
