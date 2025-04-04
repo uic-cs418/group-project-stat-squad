@@ -137,7 +137,7 @@ def cholorpath_graph():
     fig.show()
 
 
-def showHeatMap():
+def showHeatMap(home_values_dataset,income):
     ​​# Create a copy to avoid changing the original dataset
     home_values_copy = home_values_dataset.copy()
     income_copy = income.copy()
