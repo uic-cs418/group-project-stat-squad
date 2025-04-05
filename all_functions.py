@@ -5,11 +5,13 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.io as pio
 from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+from sklearn.cluster import KMeans
     
 def homevalues_dataset(home_values):
     # Create an empty list to store each state's yearly average series
@@ -92,8 +94,6 @@ def clustering(state_yearly_df, income):
     return clustering_df
 
 def choropleth_graph(median_income):    
-    import plotly.express as px
-
     # Map full state names to abbreviations
     state_to_abbrev = {
         'Alabama': 'AL','Alaska': 'AK','Arizona': 'AZ','Arkansas': 'AR','California': 'CA',
@@ -143,7 +143,7 @@ def choropleth_graph(median_income):
     )
 
     # Resize the figure
-    fig.update_layout(width=1000, height=700)
+    fig.update_layout(width=800, height=550)
     fig.show()
 
 
@@ -192,20 +192,68 @@ def showHeatMap(home_values_dataset,income):
     # Merge and calculate affordability
     merged = pd.merge(income_long, home_yearly, on=['State', 'Year'], how='inner')
     merged['PriceToIncomeRatio'] = merged['HomeValue'] / merged['MedianIncome']
+    return merged
 
-    heatmap_data = merged.pivot(index='State', columns='Year', values='PriceToIncomeRatio')
-    plt.figure(figsize=(14, 12))
-    sns.heatmap(heatmap_data, cmap='YlOrRd', linewidths=0.5, linecolor='gray', cbar_kws={'label': 'Price-to-Income Ratio'})
-    plt.title("Heatmap of Housing Affordability by State and Year")
-    plt.xlabel("Year")
-    plt.ylabel("State")
+def baseline(scaled_data,n1,n2):
+    K_range = range(n1, n2)
+    
+    inertias = []
+    silhouette_scores = []
+    
+    for k in K_range:
+        kmeans = KMeans(n_clusters=k, random_state=42)
+        labels = kmeans.fit_predict(scaled_data)  # scaled_data = standardized feature matrix from earlier
+        
+        inertias.append(kmeans.inertia_)
+        silhouette_scores.append(silhouette_score(scaled_data, labels))
+    
+    # Plotting
+    plt.figure(figsize=(8, 3))
+    
+    # Elbow Method
+    plt.subplot(1, 2, 1)
+    plt.plot(K_range, inertias, marker='o')
+    plt.title('Elbow Method (Inertia)')
+    plt.xlabel('Number of Clusters (K)')
+    plt.ylabel('Inertia')
+    plt.grid(True)
+    
+    # Silhouette Score
+    plt.subplot(1, 2, 2)
+    plt.plot(K_range, silhouette_scores, marker='o', color='orange')
+    plt.title('Silhouette Score vs K')
+    plt.xlabel('Number of Clusters (K)')
+    plt.ylabel('Silhouette Score')
+    plt.grid(True)
+    
     plt.tight_layout()
     plt.show()
 
-
-
-
+def showClustersInMap(clustering_df):
+    map_df = clustering_df.reset_index()[['Affordability']]
+    map_df['StateCode'] = clustering_df.index
     
+    fig = px.choropleth(
+        map_df,
+        locations='StateCode',
+        locationmode='USA-states',
+        color='Affordability',
+        color_discrete_map={
+            'High Affordability': '#edae49',
+            'Moderate Affordability': '#d1495b',
+            'Low Affordability': '#00798c'
+        },
+        hover_name='StateCode',
+        scope='usa',
+        title='Where Can You Still Afford a Home? A Clustering of U.S. States by Affordability'
+    )
+    
+    fig.update_layout(
+        geo=dict(bgcolor='rgba(0,0,0,0)'),
+        margin={"r":0,"t":40,"l":0,"b":0}
+    )
+    
+    fig.show()
 
 
 
