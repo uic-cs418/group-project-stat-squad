@@ -260,7 +260,7 @@ def county_graph():
     sns.set(style="whitegrid")
     
     # Load Data
-    income = pd.read_csv('New_Data_Illinois/household_income_county.csv')
+    income = pd.read_csv('household_income_county.csv')
     income = income[income['Race'] == 'Total']
     income['Ideal_Price'] = income['Household Income by Race'] * 3
     
