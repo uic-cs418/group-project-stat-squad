@@ -434,10 +434,10 @@ def visual3():
     avg = long_df.groupby('Month')['HomeValue'].mean()
     mean = avg.mean()
     deviation = (avg - mean) / mean
-
-   
     labels = deviation.apply(lambda x: 'Best' if x < -0.01 else ('Worst' if x > 0.01 else 'Neutral'))
-
+#   Best:    significantly below average (< -1%)
+#   Worst:   significantly above average (> +1%)
+#   Neutral: within ±1% of the mean
   
     plot_df = pd.DataFrame({
         'Month': avg.index,
@@ -446,7 +446,7 @@ def visual3():
         'Label': labels.values
     })
 
-    # Plot
+   
     plt.figure(figsize=(12, 6))
     sns.barplot(data=plot_df, x='Month', y='Deviation', hue='Label', dodge=False,
                 palette={'Best': 'green', 'Neutral': 'gold', 'Worst': 'red'})
