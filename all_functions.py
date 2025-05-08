@@ -258,43 +258,36 @@ def showClustersInMap(clustering_df):
 def county_graph():
 
     sns.set(style="whitegrid")
-
+    
     # Load Data
-    income = pd.read_csv('household_income_county.csv')
+    income = pd.read_csv('New_Data_Illinois/household_income_county.csv')
     income = income[income['Race'] == 'Total']
     income['Ideal_Price'] = income['Household Income by Race'] * 3
-
+    
     county_medians = income.groupby('Geography')['Ideal_Price'].median().reset_index()
-    county_medians_sorted = county_medians.sort_values(by='Ideal_Price')
-
-    baseline_price = 148540.88  # Ideal Housing Price taken from our previous data
-
-    # Create Plot
-    fig = px.line(county_medians_sorted, 
-                  x='Ideal_Price', 
-                  y='Geography', 
-                  markers=True,
-                  title='Median Affordable Housing Price by County vs. Illinois Average (2023)',
-                  labels={'Ideal_Price': 'Price ($)', 'Geography': 'County'})
-
-    fig.update_traces(marker=dict(size=6, color='green'), line=dict(color='green'))
-
-    # Highlight Cook County
-    cook_row = county_medians[county_medians['Geography'] == 'Cook County, IL']
-    if not cook_row.empty:
-        cook_price = cook_row['Ideal_Price'].values[0]
-        fig.add_trace(go.Scatter(
-            x=[cook_price],
-            y=['Cook County, IL'],
-            mode='markers',
-            marker=dict(size=14, color='blue'),
-            name='Cook County, IL'
-        ))
-
-    fig.add_vline(x=baseline_price, line_dash="dash", line_color="red", annotation_text="Avg Housing Price (2023)")
-
-    fig.update_layout(width=900, height=1600)
-
-    return fig
-
+    
+    baseline_price = 148540.88  # Ideal Housing Price
+    
+    county_medians = county_medians.sort_values(by='Ideal_Price')
+    
+    # Set figure size
+    plt.figure(figsize=(30,10))
+    
+    # Plot line graph
+    plt.plot(county_medians['Geography'], county_medians['Ideal_Price'], marker='o', label='Median Ideal Housing Price')
+    
+    # Add baseline housing price line
+    plt.axhline(y=baseline_price, color='red', linestyle='--', linewidth=2, label='Avg Housing Price (2023)')
+    
+    plt.xticks(rotation=60, ha='right')
+    
+    # Titles and labels
+    plt.title('Median Ideal Housing Price vs. Average Housing Price in Illinois Counties (2023)')
+    plt.ylabel('Price ($)')
+    plt.xlabel('County')
+    plt.legend()
+    
+    plt.tight_layout()
+    
+    return plt    
 
