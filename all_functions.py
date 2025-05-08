@@ -4,6 +4,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.io as pio
+import matplotlib.ticker as mtick
 pio.renderers.default = 'png'
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
@@ -414,3 +415,50 @@ def visual1(merged):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+    
+def visual3():
+    
+    hv_data = pd.read_csv("homevalue.csv")
+    hv_data.columns.values[5:] = pd.to_datetime(hv_data.columns[5:])
+    threshold = 0.3
+    home_val = hv_data.loc[hv_data.isnull().mean(axis=1) < threshold]
+    ts = home_val.iloc[:, 5:]
+
+   
+    long_df = pd.melt(ts, var_name='Date', value_name='HomeValue')
+    long_df['Date'] = pd.to_datetime(long_df['Date'])
+    long_df['Month'] = long_df['Date'].dt.month
+    long_df = long_df.dropna()
+
+  
+    avg = long_df.groupby('Month')['HomeValue'].mean()
+    mean = avg.mean()
+    deviation = (avg - mean) / mean
+
+   
+    labels = deviation.apply(lambda x: 'Best' if x < -0.01 else ('Worst' if x > 0.01 else 'Neutral'))
+
+  
+    plot_df = pd.DataFrame({
+        'Month': avg.index,
+        'AveragePrice': avg.values,
+        'Deviation': deviation.values,
+        'Label': labels.values
+    })
+
+    # Plot
+    plt.figure(figsize=(12, 6))
+    sns.barplot(data=plot_df, x='Month', y='Deviation', hue='Label', dodge=False,
+                palette={'Best': 'green', 'Neutral': 'gold', 'Worst': 'red'})
+    plt.axhline(0, color='gray', linestyle='--')
+    plt.title('Which Month is Best to Buy a House?')
+    plt.xlabel('Month')
+    plt.ylabel('Monthly Price Difference vs Yearly Average (%)')
+    plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    plt.xticks(ticks=range(0, 12), labels=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    plt.legend(title='Buying Time')
+    plt.tight_layout()
+    plt.grid(True, axis='y')
+    plt.show()
+    
