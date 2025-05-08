@@ -4,13 +4,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.io as pio
-import matplotlib.ticker as mtick
 pio.renderers.default = 'png'
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
+import matplotlib.ticker as mtick
 import numpy as np
 from sklearn.cluster import KMeans
 import warnings
@@ -415,7 +415,7 @@ def visual1(merged):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-    
+
 def visual3():
     
     hv_data = pd.read_csv("homevalue.csv")
@@ -435,9 +435,6 @@ def visual3():
     mean = avg.mean()
     deviation = (avg - mean) / mean
     labels = deviation.apply(lambda x: 'Best' if x < -0.01 else ('Worst' if x > 0.01 else 'Neutral'))
-#   Best:    significantly below average (< -1%)
-#   Worst:   significantly above average (> +1%)
-#   Neutral: within ±1% of the mean
   
     plot_df = pd.DataFrame({
         'Month': avg.index,
@@ -447,7 +444,7 @@ def visual3():
     })
 
    
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(10, 5))
     sns.barplot(data=plot_df, x='Month', y='Deviation', hue='Label', dodge=False,
                 palette={'Best': 'green', 'Neutral': 'gold', 'Worst': 'red'})
     plt.axhline(0, color='gray', linestyle='--')
@@ -461,4 +458,3 @@ def visual3():
     plt.tight_layout()
     plt.grid(True, axis='y')
     plt.show()
-    
