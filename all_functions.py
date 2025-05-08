@@ -4,14 +4,46 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.io as pio
+pio.renderers.default = 'png'
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.model_selection import train_test_split
 import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-import os
-os.environ["OMP_NUM_THREADS"] = "1"
 from sklearn.cluster import KMeans
+import warnings
+import plotly.graph_objects as go
+warnings.filterwarnings('ignore')
+
+def ML1_predict(clustering_df, scaled_data):
+    kmeans = KMeans(n_clusters=3, random_state=42)
+    clustering_df['Cluster'] = kmeans.fit_predict(scaled_data)
+    # map cluster labels to affordability level
+    cluster_map = {
+        0: 'Moderate Affordability',
+        1: 'High Affordability',
+        2: 'Low Affordability'
+    }
+    clustering_df['Affordability'] = clustering_df['Cluster'].map(cluster_map)
+    n_samples = scaled_data.shape[0]
+    np.random.seed(42)
+    random_clusters = np.random.randint(0, 3, size=n_samples)
+    random_silhouette = silhouette_score(scaled_data, random_clusters)
+    kmeans_silhouette = silhouette_score(scaled_data, clustering_df['Cluster'])
+    print(f"Silhouette Score (Random Clustering): {random_silhouette:.3f}")
+    print(f"Silhouette Score (K-Means Clustering): {kmeans_silhouette:.3f}")
+    return clustering_df
+    
+def cleaning_homevalues(home_values_dataset):
+    home_values_dataset.columns.values[5:] = pd.to_datetime(home_values_dataset.columns[5:])
+    threshold = 0.4
+    home_values = home_values_dataset.loc[home_values_dataset.isnull().mean(axis=1) < threshold]
+    # Interpolate across columns (i.e., across time for each region)
+    home_values.iloc[:, 5:] = home_values.iloc[:, 5:].interpolate(axis=1)
+    # Fill any remaining edge NaNs with forward/backward fill
+    home_values.iloc[:, 5:] = home_values.iloc[:, 5:].bfill(axis=1).ffill(axis=1)
+    return home_values
     
 def homevalues_dataset(home_values):
     # Create an empty list to store each state's yearly average series
@@ -120,7 +152,7 @@ def choropleth_graph(median_income):
     # Get year columns (everything except State and Abbrev)
     date_columns = df_clean.columns.difference(['State', 'State_Abbrev'])
 
-    df_clean[date_columns] = df_clean[date_columns].replace('[\$,]', '', regex=True).astype(float)
+    df_clean[date_columns] = df_clean[date_columns].replace(r'[\$,]', '', regex=True).astype(float)
 
     # Melt the dataframe for animation
     df_long = df_clean.melt(
@@ -148,7 +180,7 @@ def choropleth_graph(median_income):
 
 
 
-def CreateMerged(home_values_dataset,income):
+def showHeatMap(home_values_dataset,income):
     # Create a copy to avoid changing the original dataset
     home_values_copy = home_values_dataset.copy()
     income_copy = income.copy()
@@ -239,9 +271,9 @@ def showClustersInMap(clustering_df):
         locationmode='USA-states',
         color='Affordability',
         color_discrete_map={
-            'High Affordability': '#edae49',
-            'Moderate Affordability': '#d1495b',
-            'Low Affordability': '#00798c'
+            'High Affordability': '#8CD47E',
+            'Moderate Affordability': '#F8D66D',
+            'Low Affordability': '#FF6961'
         },
         hover_name='StateCode',
         scope='usa',
@@ -291,3 +323,94 @@ def county_graph():
     
     return plt    
 
+def CreateMerged(home_values_dataset,income):
+    # Create a copy to avoid changing the original dataset
+    home_values_copy = home_values_dataset.copy()
+    income_copy = income.copy()
+    
+    # Manually map state abbreviations to full names
+    abbr_to_full = {
+        'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+        'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+        'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+        'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+        'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+        'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+        'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+        'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+        'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+        'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+        'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+        'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+        'WI': 'Wisconsin', 'WY': 'Wyoming'
+    }
+    
+    # Map full state names
+    home_values_copy['State'] = home_values_copy['StateName'].map(abbr_to_full)
+    
+    # Convert to long format and extract year
+    home_long = home_values_copy.melt(
+        id_vars=['State'],
+        value_vars=home_values_copy.columns[5:-1],  # exclude trailing columns if any
+        var_name='Date',
+        value_name='HomeValue'
+    )
+    home_long['Year'] = pd.to_datetime(home_long['Date']).dt.year
+    home_yearly = home_long.groupby(['State', 'Year'])['HomeValue'].mean().reset_index()
+    
+    # Clean income data (on copy)
+    for col in income_copy.columns[1:]:
+        income_copy[col] = income_copy[col].str.replace(',', '').astype(float)
+    income_long = income_copy.melt(id_vars=['State'], var_name='Year', value_name='MedianIncome')
+    income_long['Year'] = income_long['Year'].astype(int)
+    
+    # Merge and calculate affordability
+    merged = pd.merge(income_long, home_yearly, on=['State', 'Year'], how='inner')
+    merged['PriceToIncomeRatio'] = merged['HomeValue'] / merged['MedianIncome']
+    return merged
+
+def Regression(clustering_df):
+    X = clustering_df[['Income_2023', 'Income_Growth', 'HomeValue_Growth']]
+    y = clustering_df['HomeValue_2023']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    baseline_pred = np.full_like(y_test, y_train.mean())
+    baseline_r2 = r2_score(y_test, baseline_pred)
+    baseline_rmse = np.sqrt(mean_squared_error(y_test, baseline_pred))
+    print(f"Baseline R²: {baseline_r2:.3f}")
+    print(f"Baseline RMSE: ${baseline_rmse:,.2f}")
+    
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    r2 = r2_score(y_test, y_pred)
+    print(f"Linear Regression Model R² Score: {r2:.3f}")
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse)
+    print(f"Linear Regression Model RMSE: ${rmse:,.2f}")
+    plt.figure(figsize=(6, 3))
+    plt.scatter(y_test, y_pred, color='royalblue', alpha=0.7)
+    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', linewidth=2)
+    plt.xlabel('Actual Home Values (2023)')
+    plt.ylabel('Predicted Home Values (2023)')
+    plt.title('Predicted vs Actual Home Values')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+def visual1(merged):
+    national_trends = merged.groupby('Year').agg({
+    'MedianIncome': 'mean',
+    'HomeValue': 'mean'
+    }).reset_index()
+    
+    plt.figure(figsize=(8, 4))
+    plt.plot(national_trends['Year'], national_trends['MedianIncome'], label='National Median Income', marker='o')
+    plt.plot(national_trends['Year'], national_trends['HomeValue'], label='National Median Home Value', marker='s')
+    plt.title("U.S. National Median Income vs Home Value (2000–2023)")
+    plt.xlabel("Year")
+    plt.ylabel("USD")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
